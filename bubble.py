@@ -54,9 +54,9 @@ def lexer(tokens):
 
 def parser(tokens):
     res = True
-    CNT_DOTS = 0
-    CNT_EXPS = 0
-    CNT_SIGN = 0
+    cnt_dots = 0
+    cnt_exps = 0
+    cnt_sign = 0
     for pos, token in enumerate(tokens):
         if pos == 0:
             if token not in (DIGIT, SIGN):
@@ -64,27 +64,27 @@ def parser(tokens):
                 print('[PARSER]Invalid char in position {}:"{}"\n'.format(pos, token))
         else:
             if token == SIGN:
-                CNT_SIGN += 1
+                cnt_sign += 1
                 if tokens[pos-1] != EXP:
                     res = False
                     print('[PARSER]Invalid char in position {}:"{}"\n'.format(pos, token))
-                if CNT_SIGN > 1:
+                if cnt_sign > 1:
                     res = False
                     print('[PARSER]Invalid sign in position {}\n'.format(pos))
             if token == EXP:
-                CNT_EXPS += 1
+                cnt_exps += 1
                 if tokens[pos-1] != DIGIT:
                     res = False
                     print('[PARSER]Invalid char in position {}:"{}"\n'.format(pos, token))
-                if CNT_EXPS > 1:
+                if cnt_exps > 1:
                     res = False
                     print('[PARSER]Invalid exp in position {}\n'.format(pos))
             if token == DOT:
-                CNT_DOTS += 1
+                cnt_dots += 1
                 if tokens[pos-1] != DIGIT:
                     res = False
                     print('[PARSER]Invalid char in position {}:"{}"\n'.format(pos, token))
-                if CNT_EXPS > 1:
+                if cnt_exps > 1:
                     res = False
                     print('[PARSER]Invalid dot in position {}\n'.format(pos))
     return res
@@ -104,8 +104,9 @@ def check_number(checking_str):
 def swap_with_next(seq, src) -> object:
     """This function swaps two elements of the sequence.
 
-    :param seq: Lalalal.
-    :param src: Abracadabra.
+    :rtype: object
+    :param seq:
+    :param src:
     """
     seq[src], seq[src + 1] = seq[src + 1], seq[src]
 
@@ -129,7 +130,7 @@ def bubble_sort(sequence, order=INC):
 
 
 def main() -> object:
-    seq = input_sequence('Enter the numbers splitted by spaces:\n')
+    seq = input_sequence('Enter the numbers split by spaces:\n')
     print(bubble_sort(seq, order=INC))
 
 if __name__ == '__main__':
