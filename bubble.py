@@ -2,102 +2,204 @@ __author__ = 'ichiro'
 
 INC, DEC = range(2)
 SIGN, DIGIT, EXP, DOT, ERROR = range(5)
+NAME, VALUE = range(2)
+SPACES = ' \t\v'
+
+PARER_INVALID_SYMBOL = '[PARSER] Invalid symbol in the position {}:"{}".'
+PARSER_ZERO_SYMBOL = \
+    PARER_INVALID_SYMBOL + \
+    'The first symbol should be a sign or digit.'
+PARSER_LAST_SYMBOL = \
+    PARER_INVALID_SYMBOL + \
+    'The last symbol should be a sign.'
+PARSER_SIGN_POSITION = \
+    PARER_INVALID_SYMBOL + \
+    'The sign should be in the first position or after an exponent.'
+PARSER_MULTIPLE_SIGN = \
+    PARER_INVALID_SYMBOL + \
+    'The multiple signs.\n'
+PARSER_EXP_POSITION = \
+    PARER_INVALID_SYMBOL + \
+    'The exponent sign should be between mantissa and exponent index.'
+PARSER_MULTIPLE_EXP = \
+    PARER_INVALID_SYMBOL + \
+    'The multiple exponent signs.'
+PARSER_DOT_POSITION = \
+    PARER_INVALID_SYMBOL + \
+    'The dot sign should be between digits.'
+PARSER_MULTIPLE_DOT = \
+    PARER_INVALID_SYMBOL + \
+    'The multiple dot signs.'
+
+tokens = []
+token_cnt = {DIGIT: 0, EXP: 0, DOT: 0}
 
 
-def input_sequence(prompt):
+def input_sequence(prompt) -> object:
     input_text = input(prompt)
+    input_text_len = len(input_text)
     strings = []
     numbers = []
     buffer = ''
+    i = 0
+    while i < input_text_len:
+        print(i)
+        char = input_text[i]
 
-    error = False
-
-    for char in input_text:
-        if char != ' ':
-            buffer += char
+        if char in SPACES:
+            i += 1
+            continue
         else:
+            buffer += char
+
+        if (i == (input_text_len - 1)) or (input_text[i + 1] in SPACES):
             strings += [buffer]
             buffer = ''
-
+        i += 1
     for pos, st in enumerate(strings):
         while not check_number(st):
             st = input('Invalid number "{}", please retype again: '.format(st))
-        numbers += [float(st)]
-
+    numbers += [float(st)]
     return numbers
 
 
 def tokenize(checking_str):
-    tokens = []
+    global tokens
+
     for char in checking_str:
         if char in '0123456789':
-            tokens += [DIGIT]
+            tokens += [{
+                NAME : DIGIT,
+                VALUE: char
+            }]
         elif char in 'eE':
-            tokens += [EXP]
+            tokens += [{
+                NAME : EXP,
+                VALUE: char
+            }]
         elif char in '+-':
-            tokens += [SIGN]
+            tokens += [{
+                NAME : SIGN,
+                VALUE: char
+            }]
         elif char in ',.':
-            tokens += [DOT]
+            tokens += [{
+                NAME : DOT,
+                VALUE: char
+            }]
         else:
-            tokens += [ERROR]
-    return tokens
+            tokens += [{
+                NAME : ERROR,
+                VALUE: char
+            }]
 
 
-def lexer(tokens):
+def lexer():
     res = True
+
     for pos, token in enumerate(tokens):
-        if token == ERROR:
+        if token[NAME] == ERROR:
             res = False
-            print('[LEXER]Invalid char in position {}:"{}"\n'.format(pos, token))
+            print(
+                '[LEXER]Invalid char in position {}:"{}"\n'.format(pos,
+                                                                   token[
+                                                                       VALUE]))
     return res
 
 
-def parser(tokens):
+def print_err(error, pos):
+    print(error.format(pos, tokens[pos][VALUE]))
+
+
+def check_token(pos, before, after, error):
+    if ((tokens[pos-1][NAME] not in before) or
+            (tokens[pos+1][NAME] not in after)):
+        print(tokens[pos-1][VALUE], tokens[pos+1][VALUE])
+        print_err(error, pos)
+        return False
+    else:
+        return True
+
+
+def check_token_cnt(pos, error):
+    global token_cnt
+
+    token = tokens[pos][NAME]
+    token_cnt[token] += 1
+
+    if token_cnt[token] > 1:
+        print_err(error, pos)
+        return False
+    else:
+        return True
+
+
+def parser():
     res = True
-    cnt_dots = 0
-    cnt_exps = 0
-    cnt_sign = 0
-    for pos, token in enumerate(tokens):
+    pos = 0
+
+    while pos < len(tokens):
+        token = tokens[pos][NAME]
         if pos == 0:
             if token not in (DIGIT, SIGN):
                 res = False
-                print('[PARSER]Invalid char in position {}:"{}"\n'.format(pos, token))
+                print_err(PARSER_ZERO_SYMBOL, pos)
+
+        elif pos == (len(tokens) - 1):
+            if token != DIGIT:
+                print_err(PARSER_LAST_SYMBOL, pos)
+
         else:
             if token == SIGN:
-                cnt_sign += 1
-                if tokens[pos-1] != EXP:
-                    res = False
-                    print('[PARSER]Invalid char in position {}:"{}"\n'.format(pos, token))
-                if cnt_sign > 1:
-                    res = False
-                    print('[PARSER]Invalid sign in position {}\n'.format(pos))
+                res = (
+                    check_token(
+                            pos,
+                            (EXP,),
+                            (DIGIT,),
+                            PARSER_SIGN_POSITION
+                    ) and
+                    check_token_cnt(
+                            pos,
+                            PARSER_MULTIPLE_SIGN
+                    )
+                )
             if token == EXP:
-                cnt_exps += 1
-                if tokens[pos-1] != DIGIT:
-                    res = False
-                    print('[PARSER]Invalid char in position {}:"{}"\n'.format(pos, token))
-                if cnt_exps > 1:
-                    res = False
-                    print('[PARSER]Invalid exp in position {}\n'.format(pos))
+                res = (
+                    check_token(
+                            pos,
+                            (DIGIT,),
+                            (DIGIT,),
+                            PARSER_EXP_POSITION
+                    ) and
+                    check_token_cnt(
+                            pos,
+                            PARSER_MULTIPLE_EXP
+                    )
+                )
             if token == DOT:
-                cnt_dots += 1
-                if tokens[pos-1] != DIGIT:
-                    res = False
-                    print('[PARSER]Invalid char in position {}:"{}"\n'.format(pos, token))
-                if cnt_exps > 1:
-                    res = False
-                    print('[PARSER]Invalid dot in position {}\n'.format(pos))
+                res = (check_token(pos, (DIGIT,), (DIGIT,),
+                                   PARSER_DOT_POSITION)
+                                   and
+                       check_token_cnt(pos, PARSER_MULTIPLE_DOT))
+        pos += 1
     return res
 
 
 def check_number(checking_str):
+    """
+
+    :param checking_str:
+    :return:
+    """
     res = True
+
     if checking_str == '':
         res = False
     else:
-        tokens = tokenize(checking_str)
-        res = lexer(tokens)
-        res = parser(tokens)
+        tokenize(checking_str)
+        # res = lexer() and parser()
+        res = parser()
+
     return res
 
 
@@ -121,17 +223,23 @@ def bubble_sort(sequence, order=INC):
     for _ in range(len(sequence)):
         for j in range(len(sequence[:-1])):
             if order == DEC:
-                if sequence[j] < sequence[j+1]:
+                if sequence[j] < sequence[j + 1]:
                     swap_with_next(sequence, j)
             else:
-                if sequence[j] > sequence[j+1]:
+                if sequence[j] > sequence[j + 1]:
                     swap_with_next(sequence, j)
     return sequence
 
 
 def main() -> object:
-    seq = input_sequence('Enter the numbers split by spaces:\n')
-    print(bubble_sort(seq, order=INC))
+    # seq = input_sequence('Enter the numbers split by spaces:\n')
+    # print(bubble_sort(seq, order=INC))
+    """
+
+    """
+    print(token_cnt)
+    print(check_number("3e84"))
+
 
 if __name__ == '__main__':
     main()
